@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import useAuth from "./useAuth";
 import { Container, Form } from "react-bootstrap";
 import SpotifyWebApi from "spotify-web-api-node";
+import TrackSearchResult from "./TrackSearchResult";
 
 const spotifyApi = new SpotifyWebApi({
   clientId: "c33217b081124d1a9a7fbd229b05ab34",
@@ -20,15 +21,20 @@ export default function Dashboard({ code }) {
   useEffect(() => {
     if (!search) return setSearchResults([]);
     if (!accessToken) return;
+
+    let cancel = false;
     spotifyApi.searchTracks(search).then((res) => {
+      if (cancel) return;
       setSearchResults(
         res.body.tracks.items.map((track) => {
-          const smallestAlbumImage = track.algum.images.reduce(
+          const smallestAlbumImage = track.album.images.reduce(
             (smallest, image) => {
               if (image.height < smallest.height) return image;
               return smallest;
-            }
+            },
+            track.album.images[0]
           );
+
           return {
             artist: track.artists[0].name,
             title: track.name,
@@ -38,7 +44,9 @@ export default function Dashboard({ code }) {
         })
       );
     });
-  }, [accessToken, search]);
+
+    return () => (cancel = true);
+  }, [search, accessToken]);
 
   return (
     <Container className="d-flex flex-column py-2" style={{ height: "100vh" }}>
@@ -49,7 +57,9 @@ export default function Dashboard({ code }) {
         onChange={(e) => setSearch(e.target.value)}
       />
       <div className="flex-grow-1 my-2" style={{ overflowY: "auto" }}>
-        Songs
+        {searchResults.map((track) => (
+          <TrackSearchResult track={track} key={track.uri} />
+        ))}
       </div>
       <div>Bottom</div>
     </Container>
